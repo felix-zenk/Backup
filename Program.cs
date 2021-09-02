@@ -55,6 +55,8 @@ namespace Backup
                     Report.Log(ReportLevel.Info, "Target: "+target);
                     Report.Log(ReportLevel.Info, "Debug: "+debug);
                 });
+            // Reset verifications to only the standard verification
+            backup.ResetVerifications();
             backup.Verify();
 
             Console.WriteLine("\nPress any key to exit");
