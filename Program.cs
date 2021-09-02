@@ -48,7 +48,17 @@ namespace Backup
             {
                 backup.StartBackup(false);
             }
+            // Adding a custom verification
+            backup.AddVerification((string source, string target, bool debug) => {
+                    Report.Log(ReportLevel.Warning, "\nCustom verification:\n- - - - - - - - - - -");
+                    Report.Log(ReportLevel.Info, "Source: "+source);
+                    Report.Log(ReportLevel.Info, "Target: "+target);
+                    Report.Log(ReportLevel.Info, "Debug: "+debug);
+                });
             backup.Verify();
+
+            Console.WriteLine("\nPress any key to exit");
+            Console.ReadKey();
         }
 
         /// <summary>
@@ -216,7 +226,7 @@ namespace Backup
                 string directoryName = builder.ToString();
                 Directory.CreateDirectory(Path.Combine(rootDirectory, directoryName));
                 Directory.Delete(Path.Combine(rootDirectory, directoryName));
-                File.Create(Path.Combine(rootDirectory, directoryName + ".txt"));
+                File.OpenWrite(Path.Combine(rootDirectory, directoryName + ".txt")).Close();
                 File.Delete(Path.Combine(rootDirectory, directoryName + ".txt"));
             }
         }
@@ -383,6 +393,17 @@ namespace Backup
                 Config.Save();
             }
         }
+        /// <summary>
+        /// A delegate for implementing custom verifications
+        /// </summary>
+        /// <param name="source">The source directory</param>
+        /// <param name="target">The target directory</param>
+        /// <param name="debug">Whether the program was started with debug enabled</param>
+        public delegate void Verification(string source, string target, bool debug);
+        /// <summary>
+        /// The list of verifications
+        /// </summary>
+        private List<Verification> verifications = new List<Verification>();
 
         /// <summary>
         /// Constructor for a new backup instance
@@ -502,6 +523,23 @@ namespace Backup
         }
 
         /// <summary>
+        /// Method to add an additional verification to the verification process
+        /// </summary>
+        /// <param name="verification">The verification delegate</param>
+        public void AddVerification(Verification verification)
+        {
+            verifications.Add(verification);
+        }
+
+        /// <summary>
+        /// Resets additional verifications so that only the standard verification is run
+        /// </summary>
+        public void ResetVerifications()
+        {
+            verifications = new List<Verification>();
+        }
+
+        /// <summary>
         /// Starts the backup process
         /// </summary>
         /// <param name="overwrite">Whether to overwrite existing files in the target directory</param>
@@ -516,6 +554,10 @@ namespace Backup
         public void Verify()
         {
             Verifier.Verify();
+            foreach (Verification verification in verifications)
+            {
+                verification(Source, Target, debug);
+            }
         }
     }
 
@@ -733,8 +775,6 @@ namespace Backup
             {
                 Report.Log(ReportLevel.Info, "Everything okay!");
             }
-            Console.WriteLine("\nPress any key to exit");
-            Console.ReadKey();
         }
     }
 }
